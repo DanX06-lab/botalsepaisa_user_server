@@ -36,7 +36,7 @@ app.use(cors({
 }));
 
 // Serve static files
-const frontendPath = path.join(__dirname, '../botalsepaisa_frontend/frontend');
+const frontendPath = path.join(__dirname, '../botalsepaisa_2.0/docs');
 app.use(express.static(frontendPath));
 
 // Debug: Check if frontend directory exists
@@ -75,8 +75,8 @@ app.get('/', (req, res) => {
 
 // Test route
 app.get('/test', (req, res) => {
-  res.json({ 
-    message: 'BotalSePaisa Server Working with Mongoose!', 
+  res.json({
+    message: 'BotalSePaisa Server Working with Mongoose!',
     timestamp: new Date(),
     database: 'MongoDB with Mongoose',
     frontend_path: frontendPath,
@@ -87,10 +87,10 @@ app.get('/test', (req, res) => {
 // Socket.IO Authentication Middleware
 io.use((socket, next) => {
   try {
-    const token = socket.handshake.auth?.token || 
-                  socket.handshake.query?.token ||
-                  socket.handshake.headers?.authorization?.replace('Bearer ', '');
-    
+    const token = socket.handshake.auth?.token ||
+      socket.handshake.query?.token ||
+      socket.handshake.headers?.authorization?.replace('Bearer ', '');
+
     if (!token) {
       console.log('⚠️ Socket connection attempt without token');
       socket.isAuthenticated = false;
@@ -102,10 +102,10 @@ io.use((socket, next) => {
     socket.userId = decoded.id;
     socket.userEmail = decoded.email;
     socket.isAuthenticated = true;
-    
+
     console.log(`✅ Socket authenticated for user: ${decoded.id}`);
     next();
-    
+
   } catch (error) {
     console.error('❌ Socket authentication error:', error.message);
     socket.isAuthenticated = false;
@@ -118,21 +118,21 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   const userId = socket.userId;
   const isAuth = socket.isAuthenticated;
-  
+
   console.log(`🔌 Socket connected: ${socket.id} | User: ${userId || 'Anonymous'} | Auth: ${isAuth}`);
-  
+
   if (isAuth && userId) {
     socket.join(`user_${userId}`);
     socket.join('authenticated_users');
-    
+
     socket.emit('connection-status', {
       status: 'authenticated',
       message: 'Connected to real-time updates',
       userId: userId
     });
-    
+
     console.log(`👤 User ${userId} joined their notification room`);
-    
+
   } else {
     socket.join('anonymous_users');
     socket.emit('connection-status', {
@@ -147,9 +147,9 @@ io.on('connection', (socket) => {
       socket.emit('error', { message: 'Authentication required for QR scanning' });
       return;
     }
-    
+
     console.log(`📱 QR scan submitted by user ${socket.userId}:`, data);
-    
+
     socket.to('admin_room').emit('admin-notification', {
       type: 'new-qr-scan',
       userId: socket.userId,
@@ -162,7 +162,7 @@ io.on('connection', (socket) => {
   socket.on('join-user-room', (data) => {
     if (socket.isAuthenticated) {
       socket.join(`user_${socket.userId}`);
-      socket.emit('room-joined', { 
+      socket.emit('room-joined', {
         room: `user_${socket.userId}`,
         message: 'Successfully joined user room'
       });
@@ -171,7 +171,7 @@ io.on('connection', (socket) => {
 
   // Ping/Pong
   socket.on('ping', (data) => {
-    socket.emit('pong', { 
+    socket.emit('pong', {
       message: 'Server is alive!',
       timestamp: new Date().toISOString(),
       authenticated: socket.isAuthenticated,
@@ -208,7 +208,7 @@ app.get('/api/socket-status', (req, res) => {
       });
     }
   });
-  
+
   res.json({
     totalConnections: io.engine.clientsCount,
     rooms: rooms,
@@ -227,7 +227,7 @@ server.listen(PORT, () => {
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔍 Test endpoint: http://localhost:${PORT}/test`);
   console.log(`📁 Static files: ${frontendPath}`);
-  
+
   if (fs.existsSync(frontendPath)) {
     const htmlFiles = fs.readdirSync(frontendPath).filter(f => f.endsWith('.html'));
     console.log(`📋 Available pages: ${htmlFiles.map(f => `/${f}`).join(', ')}`);
@@ -237,17 +237,17 @@ server.listen(PORT, () => {
 // Graceful shutdown
 const gracefulShutdown = (signal) => {
   console.log(`\n🔄 ${signal} received, shutting down gracefully...`);
-  
+
   io.emit('server-shutdown', {
     message: 'Server is shutting down for maintenance',
     timestamp: new Date().toISOString(),
     reconnect: true
   });
-  
+
   setTimeout(() => {
     server.close(() => {
       console.log('✅ HTTP Server closed');
-      
+
       io.close(() => {
         console.log('✅ Socket.IO Server closed');
         console.log('✅ Database connections closed');
